@@ -435,8 +435,10 @@ const ui = {
   fuFilters: { q: '', owner: '', status: 'active', priority: '', category: '' },
   resQuery: '',
   searchQ: '',
-  calMonth: '', // month shown in the small calendar; empty means this month
   quick: emptyQuick(), // Quick log box; dest is set only when someone picks it by hand
+  quickMore: false,    // Quick log "More options" expanded
+  noticesAll: false,   // all notices shown, not just the newest
+  todoOpen: false,     // to-do list expanded
 };
 
 /* ---------- Router ---------- */
@@ -501,22 +503,74 @@ function render() {
     else a.removeAttribute('aria-current');
   });
   const main = $('#main');
-  // Preserve focus on filter inputs across re-renders.
+  document.body.dataset.shift = currentShift();
+  // Preserve focus across re-renders: filter inputs by their focus key, buttons by action and id.
   const active = document.activeElement;
-  const focusKey = active && main.contains(active) ? active.dataset.focusKey : null;
+  const inMain = active && main.contains(active);
+  const focusKey = inMain ? active.dataset.focusKey : null;
+  const actionKey = inMain && !focusKey ? focusTarget(active) : null;
   const selStart = focusKey && active.selectionStart;
   main.dataset.view = view;
   refreshVendorList();
   main.innerHTML = VIEWS[view]();
   placeTeamThumb();
   refreshQuickLog();
+  announceCount();
   if (focusKey) {
     const el = main.querySelector(`[data-focus-key="${focusKey}"]`);
     if (el) {
       el.focus();
       if (selStart != null && el.setSelectionRange) try { el.setSelectionRange(selStart, selStart); } catch (_) { /* not a text input */ }
     }
+  } else if (actionKey) {
+    restoreFocus(actionKey);
   }
+}
+
+/* ----- Focus memory -----
+   render() rebuilds main, which destroys the button that opened a dialog. These helpers
+   find the same control in the new markup so keyboard users keep their place. */
+
+let lastMainFocus = null;
+
+const focusTarget = (el) => {
+  const ctl = el.closest('[data-action]');
+  return ctl ? { action: ctl.dataset.action, id: ctl.dataset.id || '', team: ctl.dataset.team || '' } : null;
+};
+
+function restoreFocus(key) {
+  const main = $('#main');
+  if (!key) return false;
+  const sel = `[data-action="${key.action}"]${key.id ? `[data-id="${key.id}"]` : ''}${key.team ? `[data-team="${key.team}"]` : ''}`;
+  const el = main.querySelector(sel);
+  if (el) { el.focus({ preventScroll: true }); return true; }
+  return false;
+}
+
+$('#main').addEventListener('focusin', (e) => {
+  const key = focusTarget(e.target);
+  if (key) lastMainFocus = key;
+});
+
+// After any dialog closes, return focus to the control that opened it, or the nearest sensible place.
+$$('dialog').forEach((d) => d.addEventListener('close', () => {
+  setTimeout(() => {
+    if (document.querySelector('dialog[open]')) return; // another dialog took over
+    const active = document.activeElement;
+    if (active && active !== document.body && active.isConnected) return;
+    if (!restoreFocus(lastMainFocus)) ($('#quick-log-input') || $('#main')).focus({ preventScroll: true });
+  });
+}));
+
+/* Result counts are announced from one live region outside main, which survives re-renders. */
+let announceTimer = 0;
+function announceCount() {
+  const text = $('#main [data-announce]')?.textContent.trim() || '';
+  clearTimeout(announceTimer);
+  announceTimer = setTimeout(() => {
+    const live = $('#live-status');
+    if (live.textContent !== text) live.textContent = text;
+  }, 700);
 }
 
 window.addEventListener('hashchange', () => {
@@ -544,6 +598,31 @@ function fuListItem(f, ts) {
       <div class="item-side">
         <div class="badges">${overdueBadge(f)}${priorityBadge(f.priority)}${statusBadge(f.status)}</div>
         ${f.status !== 'Done' ? `<button type="button" class="btn btn-sm" data-action="done-fu" data-id="${f.id}">Mark done</button>` : ''}
+      </div>
+    </li>`;
+}
+
+/* Overview task row: a completion checkbox, the title, one status line, and the next action.
+   Priority, category and status stay on the follow-up; this view just doesn't badge them.
+   Ticking the box runs the existing "Mark done" flow, which asks for the resolution. */
+function taskItem(f, why = '') {
+  const t = today();
+  const tone = isOverdue(f) ? 'is-overdue' : f.dueDate === t ? 'is-today' : '';
+  const status = f.status !== 'Open' ? f.status : '';
+  const parts = [
+    f.unit && esc(f.unit),
+    `<span class="task-due ${tone}">${esc(dueLabel(f))}</span>`,
+    why && esc(why),
+    status && esc(status),
+  ];
+  const line = parts.filter(Boolean).join(' <span aria-hidden="true">·</span> ');
+  return `
+    <li class="task">
+      <input type="checkbox" class="task-check" data-action="done-fu" data-id="${f.id}" aria-label="Mark done: ${esc(f.title)}">
+      <div class="task-main">
+        <button type="button" class="link-btn task-title" data-action="edit-fu" data-id="${f.id}">${esc(f.title)}</button>
+        <div class="task-meta">${line}</div>
+        ${f.nextAction ? `<div class="task-next">${esc(f.nextAction)}</div>` : ''}
       </div>
     </li>`;
 }
@@ -602,29 +681,35 @@ function viewOverview() {
   const team = ui.team;
   const fus = state.followups.filter((f) => !team || f.owner === team);
   const active = fus.filter((f) => f.status !== 'Done');
+  // One "Needs attention" list: each follow-up appears once, in its most urgent group.
   const overdue = active.filter(isOverdue).sort(byDue);
   const dueToday = active.filter((f) => f.dueDate === t).sort(byDue);
   const high = active.filter((f) => f.priority === 'High' && f.dueDate > t).sort(byDue);
   const weekOut = dayOffset(7);
   const upcoming = active.filter((f) => f.dueDate > t && f.dueDate <= weekOut && f.priority !== 'High').sort(byDue);
-  const todaysLogs = state.logs.filter((l) => l.date === t);
   // Newest first. byLogRecent sorts by date then shift, so within today the latest shift comes first.
-  const todaysSorted = [...todaysLogs].sort(byLogRecent);
+  const todaysSorted = state.logs.filter((l) => l.date === t).sort(byLogRecent);
   const pinned = state.resources.filter(isPinned);
-  const highCount = active.filter((f) => f.priority === 'High').length;
+  const shift = currentShift();
 
-  const hour = new Date().getHours();
-  const greet = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
-
-  const list = (items, empty) => (items.length ? `<ul class="items">${items.map((f) => fuListItem(f)).join('')}</ul>` : emptyState(empty));
+  const list = (items, empty, why) => (items.length ? `<ul class="tasks">${items.map((f) => taskItem(f, why)).join('')}</ul>` : emptyState(empty));
 
   const teamButtons = ['', ...OPTIONS.teams].map((tm) =>
     `<button type="button" class="seg" data-action="set-team" data-team="${esc(tm)}" aria-pressed="${ui.team === tm}">${tm || 'All teams'}</button>`).join('');
 
-  const stat = (label, value, filter, tone = '') => `
-    <button type="button" class="stat ${tone}" data-action="goto-fu" data-filter='${esc(JSON.stringify(filter))}'>
-      <span class="stat-value">${value}</span><span class="stat-label">${label}</span>
-    </button>`;
+  const viewAllFu = `<button type="button" class="link-btn small-link" data-action="goto-fu" data-filter='${esc(JSON.stringify({ owner: team, status: 'active' }))}'>View all</button>`;
+  // Same order as before: overdue, then due today, then high priority. High-priority items say why they're listed.
+  const attentionItems = [...overdue, ...dueToday].map((f) => taskItem(f)).concat(high.map((f) => taskItem(f, 'High priority')));
+  const attentionCount = attentionItems.length;
+  const attention = attentionCount
+    ? `<ul class="tasks">${attentionItems.join('')}</ul>`
+    : `<p class="attention-clear">Nothing overdue, due today or high priority${team ? ` for ${esc(team)}` : ''}.</p>`;
+
+  // Newest notice first; the rest open with "View all".
+  const notices = state.notices.map((n, i) => ({ n, i })).sort((a, b) => (b.n.date || '').localeCompare(a.n.date || '') || b.i - a.i).map((x) => x.n);
+  const shownNotices = ui.noticesAll ? notices : notices.slice(0, 1);
+  const noticesToggle = notices.length > 1
+    ? `<button type="button" class="link-btn small-link" data-action="toggle-notices" aria-expanded="${ui.noticesAll}">${ui.noticesAll ? 'Show less' : `View all ${notices.length}`}</button>` : '';
 
   return `
   <div class="overview-layout">
@@ -633,57 +718,47 @@ function viewOverview() {
     ${fuStatus === 'error' ? followupBanner() : ''}
     <div class="page-head">
       <div>
-        <h1>${esc(currentUser?.name || greet)} :)</h1>
-        <p class="muted">${esc(fmtDate(t, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }))} · ${esc(currentShift())} shift<span class="weather" id="weather"${weatherText ? '' : ' hidden'}>${esc(weatherText)}</span></p>
+        <h1>${esc(fmtDate(t, { weekday: 'long', month: 'long', day: 'numeric' }))}</h1>
+        <p class="desk-meta">
+          <span class="shift-chip">${esc(shift)} shift</span>
+          <span>${esc(SHIFT_NOTE.property)} front desk</span>
+          <span class="weather" id="weather"${weatherText ? '' : ' hidden'}>${esc(weatherText)}</span>
+        </p>
       </div>
       <div class="actions">
-        <button type="button" class="btn btn-primary" data-action="new-log">+ Shift log</button>
-        <button type="button" class="btn" data-action="new-fu">+ Follow-up</button>
-        <button type="button" class="btn" data-action="shift-note">Generate shift note</button>
+        <button type="button" class="btn" data-action="shift-note" aria-keyshortcuts="N">Shift note</button>
       </div>
     </div>
-    <div class="team-filter" role="group" aria-label="Show actionable items for">
-      <span class="muted">Actionable items for:</span>
+    <div class="team-filter" role="group" aria-label="Show follow-ups for">
       <div class="segmented"><span class="seg-thumb" aria-hidden="true"></span>${teamButtons}</div>
     </div>
     </div>
 
-    ${quickAccessHtml()}
-
     <div class="overview-main">
     ${quickLogHtml()}
-    <div class="stats">
-      <a class="stat" href="#logs"><span class="stat-value">${todaysLogs.length}</span><span class="stat-label">Logs today</span></a>
-      ${stat('Open follow-ups', active.length, { status: 'active', owner: team })}
-      ${stat('Overdue', overdue.length, { status: 'overdue', owner: team }, overdue.length ? 'tone-danger' : '')}
-      ${stat('Due today', dueToday.length, { status: 'today', owner: team }, dueToday.length ? 'tone-warn' : '')}
-      ${stat('High priority', highCount, { status: 'active', priority: 'High', owner: team })}
-    </div>
 
     <div class="overview-grid">
       <div class="col">
+        ${section('Needs attention', attentionCount, attention, viewAllFu)}
         ${section("Today's shift activity", todaysSorted.length,
           todaysSorted.length ? `<div class="logs compact">${todaysSorted.map((l) => logItem(l)).join('')}</div>` : emptyState('No shift logs yet today.'),
           '<a href="#logs" class="small-link">View all</a>')}
       </div>
       <div class="col">
-        ${todoSection()}
-        ${section('Important notices', state.notices.length, `
-          ${state.notices.length ? `<ul class="notices">${state.notices.map((n) => `
+        ${section('Notices for the team', notices.length, `
+          ${notices.length ? `<ul class="notices" id="notice-list">${shownNotices.map((n) => `
             <li><span>${esc(n.text)}</span>
-              <button type="button" class="btn btn-sm btn-ghost" data-action="del-notice" data-id="${n.id}" aria-label="Dismiss notice: ${esc(n.text)}">Dismiss</button></li>`).join('')}</ul>` : emptyState('No notices.')}
+              <button type="button" class="btn btn-sm btn-ghost" data-action="del-notice" data-id="${n.id}" aria-label="Remove notice for everyone: ${esc(n.text)}">Remove</button></li>`).join('')}</ul>` : emptyState('No notices.')}
           <form class="inline-form" data-form="notice">
             <label for="notice-input" class="sr-only">New notice</label>
             <input id="notice-input" name="text" placeholder="Add a notice for the team…" autocomplete="off">
             <button type="submit" class="btn btn-sm">Add</button>
-          </form>`)}
-        ${section('Overdue', overdue.length, list(overdue, 'Nothing overdue. 🎉'))}
-        ${section('Due today', dueToday.length, list(dueToday, 'Nothing due today.'))}
-        ${section('High priority', high.length, list(high, 'No other high-priority items.'))}
+          </form>`, noticesToggle)}
         ${section('Coming up this week', upcoming.length, list(upcoming, 'Nothing else scheduled in the next 7 days.'))}
         ${section('Quick links', pinned.length,
           pinned.length ? `<ul class="quick-links">${pinned.map(resourceLink).join('')}</ul>` : emptyState('Pin resources on the Resources tab to show them here.'),
           '<a href="#resources" class="small-link">All resources</a>')}
+        ${todoSection()}
       </div>
     </div>
     </div>
@@ -698,38 +773,10 @@ function quickAccessUrl(link) {
   return state.resources.find((r) => r.name.trim().toLowerCase() === target)?.url || '';
 }
 
-/* Small month calendar above the quick links, with a circle on today's date. */
-function miniCalendarHtml() {
-  const now = today();
-  const month = ui.calMonth || now.slice(0, 7);
-  const [y, m] = month.split('-').map(Number);
-  const blanks = (new Date(y, m - 1, 1).getDay() + 6) % 7; // weeks start on Monday
-  const total = new Date(y, m, 0).getDate();
-  const cells = [...Array(blanks).fill(0), ...Array.from({ length: total }, (_, i) => i + 1)];
-  const weeks = [];
-  for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
-  const dayCell = (d) => {
-    if (!d) return '<td></td>';
-    const isToday = `${month}-${String(d).padStart(2, '0')}` === now;
-    return `<td><span class="cal-day${isToday ? ' is-today' : ''}"${isToday ? ' aria-current="date"' : ''}>${d}</span></td>`;
-  };
-  const days = [['Mo', 'Monday'], ['Tu', 'Tuesday'], ['We', 'Wednesday'], ['Th', 'Thursday'], ['Fr', 'Friday'], ['Sa', 'Saturday'], ['Su', 'Sunday']];
-  return `
-    <section class="quick-card mini-cal" aria-labelledby="mini-cal-title">
-      <div class="mini-cal-head">
-        <h2 id="mini-cal-title" aria-live="polite">${esc(new Date(y, m - 1, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' }))}</h2>
-        <button type="button" class="cal-nav" data-action="cal-step" data-step="-1" data-focus-key="cal-prev" aria-label="Previous month">‹</button>
-        <button type="button" class="cal-nav" data-action="cal-step" data-step="1" data-focus-key="cal-next" aria-label="Next month">›</button>
-      </div>
-      <table>
-        <thead><tr>${days.map(([short, full]) => `<th scope="col" abbr="${full}">${short}</th>`).join('')}</tr></thead>
-        <tbody>${weeks.map((week) => `<tr>${[...week, ...Array(7 - week.length).fill(0)].map(dayCell).join('')}</tr>`).join('')}</tbody>
-      </table>
-    </section>`;
-}
+const SHORTCUTS = [['/', 'Search'], ['L', 'New shift log'], ['F', 'New follow-up'], ['N', 'Shift note']];
 
 function quickAccessHtml() {
-  return `<aside class="quick-access" aria-label="Quick access">${miniCalendarHtml()}${QUICK_ACCESS.map((group) => `
+  return `<nav class="quick-access" aria-label="Quick access">${QUICK_ACCESS.map((group) => `
     <section class="quick-card">
       <h2>${esc(group.title)}</h2>
       <ul>${group.links.map((link) => {
@@ -737,10 +784,14 @@ function quickAccessHtml() {
         const ext = url && /^https?:/i.test(url);
         return `<li>${url
           ? `<a href="${esc(url)}"${ext ? ' target="_blank" rel="noopener noreferrer"' : ''}>${esc(link.name)}${ext ? '<span class="sr-only"> (opens in new tab)</span>' : ''}</a>`
-          : `<span class="unset" title="No link yet. Add a resource named “${esc(link.resource || link.name)}”.">${esc(link.name)}</span>`}</li>`;
+          : `<span class="unset" title="No link yet. Add a resource named “${esc(link.resource || link.name)}”.">${esc(link.name)}<span class="sr-only"> (no link yet)</span></span>`}</li>`;
       }).join('')}</ul>
     </section>`).join('')}
-  </aside>`;
+    <section class="quick-card shortcuts">
+      <h2>Keyboard</h2>
+      <ul class="shortcut-list">${SHORTCUTS.map(([key, label]) => `<li><kbd>${key}</kbd> ${label}</li>`).join('')}</ul>
+    </section>
+  </nav>`;
 }
 
 /* ----- Current weather (Open-Meteo, no API key) ----- */
@@ -845,10 +896,10 @@ function viewLogs() {
       <label>Shift<select name="shift" data-focus-key="log-shift">${optionList(OPTIONS.shifts, f.shift, 'All')}</select></label>
       <label>From<input type="date" name="from" value="${esc(f.from)}" data-focus-key="log-from"></label>
       <label>To<input type="date" name="to" value="${esc(f.to)}" data-focus-key="log-to"></label>
-      ${anyFilter ? '<button type="button" class="btn btn-ghost" data-action="clear-log-filters">Clear</button>' : ''}
+      ${anyFilter ? '<button type="button" class="btn btn-ghost" data-action="clear-log-filters">Clear filters</button>' : ''}
     </form>
 
-    <p class="result-count" aria-live="polite">${logs.length} of ${state.logs.length} entries</p>
+    <p class="result-count" data-announce>${logs.length} of ${state.logs.length} entries</p>
 
     ${logs.length ? [...groups].map(([date, items]) => `
       <section class="day-group">
@@ -917,10 +968,10 @@ function viewFollowups() {
       <label>Owner<select name="owner" data-focus-key="fu-owner">${optionList(OPTIONS.teams, f.owner, 'All')}</select></label>
       <label>Priority<select name="priority" data-focus-key="fu-pri">${optionList(OPTIONS.priorities, f.priority, 'All')}</select></label>
       <label>Category<select name="category" data-focus-key="fu-cat">${optionList(OPTIONS.categories, f.category, 'All')}</select></label>
-      ${anyFilter ? '<button type="button" class="btn btn-ghost" data-action="clear-fu-filters">Reset</button>' : ''}
+      ${anyFilter ? '<button type="button" class="btn btn-ghost" data-action="clear-fu-filters">Clear filters</button>' : ''}
     </form>
 
-    <p class="result-count" aria-live="polite">${list.length} of ${state.followups.length} follow-ups</p>
+    <p class="result-count" data-announce>${list.length} of ${state.followups.length} follow-ups</p>
 
     ${list.length ? `
       <div class="table-wrap">
@@ -981,7 +1032,7 @@ function viewResources() {
     <form class="filters" data-form="res-filters" aria-label="Filter resources">
       <label class="grow">Find a resource<input type="search" name="q" value="${esc(ui.resQuery)}" data-focus-key="res-q" placeholder="e.g. leak, fob, packages"></label>
     </form>
-    <p class="result-count" aria-live="polite">${matches.length} of ${state.resources.length} resources</p>
+    <p class="result-count" data-announce>${matches.length} of ${state.resources.length} resources</p>
     <div class="res-grid">
       ${groups.filter(([, items]) => items.length || (!ts.length && state.resources.length)).map(([g, items]) => `
         <section class="card">
@@ -1015,7 +1066,7 @@ function viewSearch() {
   return `
     <div class="page-head">
       <div><h1>Search results</h1>
-      <p class="muted" aria-live="polite">${total} result${total === 1 ? '' : 's'} for “${esc(ui.searchQ.trim())}” · ${ms.toFixed(0)} ms</p></div>
+      <p class="muted" data-announce>${total} result${total === 1 ? '' : 's'} for “${esc(ui.searchQ.trim())}” · ${ms.toFixed(0)} ms</p></div>
     </div>
     ${people.length ? section('Residents', people.length, `<ul class="people">${people.slice(0, LIMIT).map((o) => `
       <li>
@@ -1039,12 +1090,34 @@ function viewSearch() {
 
 /* ---------- Toasts ---------- */
 
-function toast(msg, kind = 'ok') {
+/* kind 'error' is announced at once (role=alert) and stays longer.
+   action: { label, run } adds a button such as Undo; onExpire runs if it wasn't pressed. */
+function toast(msg, kind = 'ok', { action, onExpire } = {}) {
   const el = document.createElement('div');
   el.className = `toast toast-${kind}`;
-  el.textContent = msg;
+  if (kind === 'error') el.setAttribute('role', 'alert');
+  const text = document.createElement('span');
+  text.className = 'toast-msg';
+  text.textContent = msg;
+  el.appendChild(text);
+  let acted = false;
+  if (action) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'toast-action';
+    btn.textContent = action.label;
+    btn.addEventListener('click', () => {
+      acted = true;
+      el.remove();
+      action.run();
+    });
+    el.appendChild(btn);
+  }
   $('#toasts').appendChild(el);
-  setTimeout(() => el.remove(), kind === 'error' ? 7000 : 3000);
+  setTimeout(() => {
+    el.remove();
+    if (!acted) onExpire?.();
+  }, action ? 6000 : kind === 'error' ? 10000 : 3000);
 }
 
 /* ---------- Dialog helpers ---------- */
@@ -1088,13 +1161,41 @@ function setFormValues(form, values) {
   });
 }
 
+/* Forms with typed changes ask before closing, so a stray backdrop click or Esc
+   doesn't throw away a half-written entry. */
+const DISCARD_PROMPTS = {
+  'log-dialog': 'Discard this shift log? What you typed will be lost.',
+  'fu-dialog': 'Discard this follow-up? What you typed will be lost.',
+  'res-dialog': 'Discard changes to this resource?',
+};
+
+async function requestClose(d) {
+  const prompt = DISCARD_PROMPTS[d.id];
+  if (prompt && d.dataset.dirty && !(await confirmDialog(prompt, 'Discard'))) return;
+  d.close();
+}
+
+Object.keys(DISCARD_PROMPTS).forEach((id) => {
+  const d = $(`#${id}`);
+  const markDirty = () => { d.dataset.dirty = '1'; };
+  d.addEventListener('input', markDirty);
+  d.addEventListener('change', markDirty);
+  d.addEventListener('close', () => { delete d.dataset.dirty; });
+  // Esc fires "cancel" on the dialog.
+  d.addEventListener('cancel', (e) => {
+    if (!d.dataset.dirty) return;
+    e.preventDefault();
+    requestClose(d);
+  });
+});
+
 document.addEventListener('click', (e) => {
   const btn = e.target.closest('dialog [data-action="cancel"]');
-  if (btn) btn.closest('dialog').close();
+  if (btn) requestClose(btn.closest('dialog'));
 });
 
 // Close dialogs when clicking the backdrop.
-$$('dialog:not(#login-dialog)').forEach((d) => d.addEventListener('click', (e) => { if (e.target === d) d.close(); }));
+$$('dialog:not(#login-dialog)').forEach((d) => d.addEventListener('click', (e) => { if (e.target === d) requestClose(d); }));
 
 function confirmDialog(message, okLabel = 'Confirm') {
   const d = $('#confirm-dialog');
@@ -1196,11 +1297,16 @@ function showLogStep(step) {
   $('#log-step-label').textContent = `Step ${step} of 2`;
   $('#log-back').hidden = step !== 2;
   $('#log-save').hidden = step !== 2;
+  $('#log-continue').hidden = step !== 1;
 }
 
 function goToStep2() {
   const sec = selectedSection();
-  if (!sec) return;
+  if (!sec) {
+    showFormError(logForm, 'Choose what type of update you are logging.');
+    $('input[name="section"]', logForm)?.focus();
+    return;
+  }
   clearInvalid(logForm);
   showLogStep(2);
   $('#log-section-name').textContent = sec.title;
@@ -1221,7 +1327,7 @@ function goToStep2() {
 
 /* Clicking a card goes straight to step 2. Only real pointer clicks on the card count
    (detail > 0): arrow keys also fire "click" on the radios, so keyboard users can move
-   between cards and press Enter to continue. */
+   between cards, then press Enter or the Continue button. */
 $('#log-sections').addEventListener('click', (e) => {
   const card = e.target.closest('.type-card');
   if (!card || e.detail === 0 || e.target.matches('input')) return;
@@ -1735,21 +1841,71 @@ $('#note-shift').addEventListener('change', refreshNote);
 /* Copies the (possibly edited) preview as formatted HTML, with plain text as a fallback format. */
 $('#note-copy').addEventListener('click', async () => {
   const preview = $('#note-preview');
+  let copied = true;
   try {
     await navigator.clipboard.write([new ClipboardItem({
       'text/html': new Blob([preview.innerHTML], { type: 'text/html' }),
       'text/plain': new Blob([preview.innerText], { type: 'text/plain' }),
     })]);
   } catch (_) {
+    preview.focus(); // before selecting: focusing an editable area moves the caret
     const range = document.createRange();
     range.selectNodeContents(preview);
     const sel = getSelection();
     sel.removeAllRanges();
     sel.addRange(range);
-    document.execCommand('copy');
-    sel.removeAllRanges();
+    try { copied = document.execCommand('copy'); } catch (_) { copied = false; }
+    // On failure the note stays selected, ready for Ctrl+C.
+    if (copied) sel.removeAllRanges();
   }
-  toast('Shift note copied. Paste it into Outlook.');
+  if (copied) toast('Shift note copied. Paste it into Outlook.');
+  else toast("Couldn't copy automatically. The note is selected: press Ctrl+C (or ⌘C) to copy it.", 'error');
+});
+
+/* ----- Menu panel (☰) -----
+   Frequently used links, trackers and shortcuts. Rebuilt on each open so resource links stay current. */
+
+const menuPanel = $('#menu-panel');
+const menuBtn = $('#menu-btn');
+
+menuBtn.addEventListener('click', () => {
+  $('#menu-content').innerHTML = quickAccessHtml();
+  menuPanel.showModal();
+  menuBtn.setAttribute('aria-expanded', 'true');
+});
+menuPanel.addEventListener('close', () => menuBtn.setAttribute('aria-expanded', 'false'));
+
+/* ----- Account & settings dropdown -----
+   Opens from the profile icon; closes on Esc, an outside click, or choosing an item. */
+
+const accountBtn = $('#account-btn');
+const accountMenu = $('#account-menu');
+const accountItems = () => $$('#account-menu button:not([hidden])');
+
+function setAccountMenu(open, { returnFocus = false } = {}) {
+  accountMenu.hidden = !open;
+  accountBtn.setAttribute('aria-expanded', String(open));
+  if (open) accountItems()[0]?.focus();
+  else if (returnFocus) accountBtn.focus();
+}
+
+accountBtn.addEventListener('click', () => setAccountMenu(accountMenu.hidden));
+// Runs after the item's own click handler (bubbling), so the action still happens.
+accountMenu.addEventListener('click', (e) => { if (e.target.closest('button')) setAccountMenu(false); });
+accountMenu.addEventListener('keydown', (e) => {
+  const items = accountItems();
+  const i = items.indexOf(document.activeElement);
+  if (e.key === 'Escape') { e.preventDefault(); setAccountMenu(false, { returnFocus: true }); }
+  else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    items[(i + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length]?.focus();
+  }
+});
+document.addEventListener('click', (e) => {
+  if (!accountMenu.hidden && !e.target.closest('.account')) setAccountMenu(false);
+});
+$('.account').addEventListener('focusout', (e) => {
+  if (!accountMenu.hidden && !e.currentTarget.contains(e.relatedTarget) && e.relatedTarget) setAccountMenu(false);
 });
 
 /* ----- Data dialog ----- */
@@ -1929,16 +2085,25 @@ main.addEventListener('click', (e) => {
     }
     case 'new-fu': return openFuDialog();
     case 'edit-fu': return openFuDialog(state.followups.find((f) => f.id === id));
-    case 'done-fu': return openFuDialog(state.followups.find((f) => f.id === id), { status: 'Done' });
+    case 'done-fu':
+      // The checkbox stays unticked until the follow-up is actually saved as Done.
+      if (el.type === 'checkbox') e.preventDefault();
+      return openFuDialog(state.followups.find((f) => f.id === id), { status: 'Done' });
+    case 'quick-more':
+      ui.quickMore = !ui.quickMore;
+      return render();
+    case 'toggle-notices':
+      ui.noticesAll = !ui.noticesAll;
+      return render();
+    case 'toggle-todos':
+      ui.todoOpen = !ui.todoOpen;
+      render();
+      if (ui.todoOpen) $('#todo-input')?.focus();
+      return;
     case 'new-res': return openResDialog();
     case 'edit-res': return openResDialog(state.resources.find((r) => r.id === id));
     case 'shift-note': return chooseBuilding();
     case 'set-team': return setTeam(el.dataset.team);
-    case 'cal-step': {
-      const [y, m] = (ui.calMonth || today().slice(0, 7)).split('-').map(Number);
-      ui.calMonth = isoDate(new Date(y, m - 1 + Number(el.dataset.step), 1)).slice(0, 7);
-      return render();
-    }
     case 'goto-fu': {
       const f = JSON.parse(el.dataset.filter);
       ui.fuFilters = { q: '', owner: f.owner || '', status: f.status || 'active', priority: f.priority || '', category: '' };
@@ -1961,20 +2126,31 @@ main.addEventListener('click', (e) => {
       render();
       return $('#quick-log-input')?.focus();
     case 'quick-tidy': return tidyQuickLog(el.closest('form'), el);
-    case 'del-todo':
-      saveTodos(loadTodos().filter((t) => t.id !== id));
+    case 'del-todo': {
+      const before = loadTodos();
+      saveTodos(before.filter((t) => t.id !== id));
       render();
       $('#todo-input')?.focus();
+      toast('To-do removed.', 'ok', { action: { label: 'Undo', run: () => { saveTodos(before); render(); } } });
       return;
+    }
     case 'del-notice': {
-      el.disabled = true;
-      db(() => sb.from('notices').delete().eq('id', id).select()).then((res) => {
-        if (res.ok && !res.data.length) res.ok = false, res.error = dbErrorMessage({ code: 'PGRST116' });
-        if (!res.ok) { el.disabled = false; return toast(res.error, 'error'); }
-        state.notices = state.notices.filter((n) => n.id !== id);
+      // Hidden straight away, deleted for everyone only once the Undo window has passed.
+      const i = state.notices.findIndex((n) => n.id === id);
+      if (i < 0) return;
+      const [notice] = state.notices.splice(i, 1);
+      const putBack = () => {
+        if (!state.notices.some((n) => n.id === id)) state.notices.splice(Math.min(i, state.notices.length), 0, notice);
         render();
-        toast('Notice dismissed.');
-        $('#notice-input')?.focus();
+      };
+      render();
+      $('#notice-input')?.focus();
+      toast('Notice removed for everyone.', 'ok', {
+        action: { label: 'Undo', run: putBack },
+        onExpire: () => db(() => sb.from('notices').delete().eq('id', id).select()).then((res) => {
+          if (res.ok && !res.data.length) res.ok = false, res.error = dbErrorMessage({ code: 'PGRST116' });
+          if (!res.ok) { putBack(); toast(`${res.error} The notice was not removed.`, 'error'); }
+        }),
       });
       return;
     }
@@ -2103,7 +2279,13 @@ function saveTodos(items) {
 function todoSection() {
   const todos = loadTodos();
   const left = todos.filter((t) => !t.done).length;
-  return section('To-do', left, `
+  const open = ui.todoOpen;
+  // Collapsed by default: a secondary, personal list beside the team's shared work.
+  return `
+    <section class="card todo-panel">
+      <h2><button type="button" class="disclosure" data-action="toggle-todos" aria-expanded="${open}" aria-controls="todo-body">
+        My to-do list <span class="count">${left}</span></button></h2>
+      <div id="todo-body"${open ? '' : ' hidden'}>
     ${todos.length ? `<ul class="todos">${todos.map((t) => `
       <li class="${t.done ? 'done' : ''}">
         <label class="check"><input type="checkbox" data-action="toggle-todo" data-id="${t.id}"${t.done ? ' checked' : ''}> <span>${esc(t.text)}</span></label>
@@ -2116,7 +2298,9 @@ function todoSection() {
       <label for="todo-input" class="sr-only">New to-do</label>
       <input id="todo-input" name="text" placeholder="Add a to-do…" autocomplete="off">
       <button type="submit" class="btn btn-sm">Add</button>
-    </form>`);
+    </form>
+      </div>
+    </section>`;
 }
 
 /* The Quick log rules also tidy a to-do into a log draft. Without a match, the type is chosen as usual. */
@@ -2218,17 +2402,19 @@ function quickFollowupHtml() {
 function quickLogHtml() {
   if (ui.quick.pasted) return quickBookingsHtml();
   const options = SECTIONS.flatMap((sec) => sec.subtypes.map((st) => [`${sec.id}/${st.id}`, destLabel(sec, st)]));
+  const more = ui.quickMore;
+  // When the options are folded away, say which ones are switched on.
+  const active = [ui.quick.dest && 'destination chosen', ui.quick.fu.on && 'follow-up on'].filter(Boolean);
   return `
     <form class="card quick-log" data-form="quick-log">
-      <label for="quick-log-input"><strong>Quick log</strong></label>
+      <h2><label for="quick-log-input" class="quick-log-title">Quick log</label></h2>
       <div class="inline-form">
         <div class="quick-log-field">
-          <input id="quick-log-input" name="text" data-focus-key="quick-log" value="${esc(ui.quick.text)}" placeholder="Type a note, e.g. brightway on site for cleaning" autocomplete="off"
-            role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="quick-log-picks">
+          <input id="quick-log-input" name="text" data-focus-key="quick-log" value="${esc(ui.quick.text)}" placeholder="What happened?" autocomplete="off"
+            role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="quick-log-picks" aria-describedby="quick-log-hint">
           <ul id="quick-log-picks" class="quick-log-picks" role="listbox" aria-label="Suggestions" hidden></ul>
         </div>
-        ${ui.quick.review ? '' : `<button type="submit" class="btn btn-sm">Add</button>
-        <button type="button" class="btn btn-sm btn-ghost" data-action="quick-tidy">Tidy with Claude</button>`}
+        ${ui.quick.review ? '' : '<button type="submit" class="btn btn-primary">Save</button>'}
       </div>
       ${ui.quick.review ? `
       <label for="quick-log-review" class="muted small">Claude's version. Edit it if needed, then press Enter to save.</label>
@@ -2237,16 +2423,23 @@ function quickLogHtml() {
         <button type="submit" class="btn btn-sm btn-primary">Save</button>
         <button type="button" class="btn btn-sm btn-ghost" data-action="quick-use-typed">Use my wording</button>
       </div>` : ''}
-      <div class="quick-log-dest">
-        <label for="quick-log-dest" class="muted small">Goes to</label>
-        <select id="quick-log-dest" aria-describedby="quick-log-hint">
-          <option value="">Choose where this goes…</option>
-          ${options.map(([value, label]) => `<option value="${value}">${esc(label)}</option>`).join('')}
-        </select>
+      <div class="quick-log-foot">
+        <button type="button" class="disclosure quick-log-more" data-action="quick-more" aria-expanded="${more}" aria-controls="quick-log-options">
+          More options${!more && active.length ? ` <span class="muted">· ${active.join(', ')}</span>` : ''}</button>
         <span id="quick-log-hint" class="muted small" aria-live="polite"></span>
-        <label class="check quick-log-fu-toggle"><input type="checkbox" name="fuOn"${ui.quick.fu.on ? ' checked' : ''}> Schedule a follow-up</label>
       </div>
-      ${ui.quick.fu.on ? quickFollowupHtml() : ''}
+      <div class="quick-log-options" id="quick-log-options"${more ? '' : ' hidden'}>
+        <div class="quick-log-dest">
+          <label for="quick-log-dest" class="muted small">Goes to</label>
+          <select id="quick-log-dest" aria-describedby="quick-log-hint">
+            <option value="">Choose where this goes…</option>
+            ${options.map(([value, label]) => `<option value="${value}">${esc(label)}</option>`).join('')}
+          </select>
+          ${ui.quick.review ? '' : '<button type="button" class="btn btn-ghost btn-sm" data-action="quick-tidy">Tidy with Claude</button>'}
+          <label class="check quick-log-fu-toggle"><input type="checkbox" name="fuOn"${ui.quick.fu.on ? ' checked' : ''}> Schedule a follow-up</label>
+        </div>
+        ${ui.quick.fu.on ? quickFollowupHtml() : ''}
+      </div>
     </form>`;
 }
 
@@ -2351,8 +2544,9 @@ function saveQuickAsTyped(form) {
   const text = ui.quick.text.trim();
   const dest = quickDest();
   if (!dest) {
+    ui.quickMore = true; // "Goes to" lives under More options; open it to ask
     render();
-    toast('Choose where this note goes.', 'error');
+    toast('Choose where this note goes, then press Save.', 'error');
     return $('#quick-log-dest').focus();
   }
   return saveQuickLog(form, dest, quickFields(dest, text, occupants), false);
@@ -2395,6 +2589,7 @@ async function saveQuickLog(form, dest, fields, edited) {
   const [section, subtype] = dest.split('/');
   const fu = { ...ui.quick.fu, title: ui.quick.fu.title.trim(), due: ui.quick.fu.due || dayOffset(1) };
   if (fu.on && !fu.title) {
+    if (!ui.quickMore) { ui.quickMore = true; render(); }
     toast('Add what needs to happen for the follow-up.', 'error');
     return $('#quick-log-fu-title')?.focus();
   }
@@ -2439,16 +2634,14 @@ function addTodo(form) {
   $('#todo-input')?.focus();
 }
 
-/* Arrow keys and Tab choose a suggestion. Enter only picks one that was arrowed to, so a
-   note can always be submitted even when a word happens to match a suggestion. */
+/* Arrow keys move through the suggestions and Enter picks the highlighted one. Enter only
+   picks one that was arrowed to, so a note can always be submitted even when a word happens
+   to match a suggestion. Tab is left alone so it always moves focus. */
 main.addEventListener('keydown', (e) => {
   if (e.target.id !== 'quick-log-input' || !quickPicks) return;
   if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
     e.preventDefault();
     highlightQuickPick(e.key === 'ArrowDown' ? 1 : -1);
-  } else if (e.key === 'Tab' && !e.shiftKey) {
-    e.preventDefault();
-    chooseQuickPick(Math.max(quickPicks.active, 0));
   } else if (e.key === 'Enter' && quickPicks.active >= 0) {
     e.preventDefault();
     chooseQuickPick(quickPicks.active);

@@ -168,7 +168,10 @@
     location.reload();
   };
 
-  document.getElementById('reset-demo-btn')?.addEventListener('click', () => {
-    if (confirm('Restore the original sample data? Changes you made in this demo will be lost.')) window.resetDemoData();
+  // Uses the dashboard's own confirm dialog (defined in app.js, which loads after this file).
+  document.getElementById('reset-demo-btn')?.addEventListener('click', async () => {
+    const message = 'Restore the original sample data? Changes you made in this demo will be lost.';
+    const yes = typeof confirmDialog === 'function' ? await confirmDialog(message, 'Restore') : confirm(message);
+    if (yes) window.resetDemoData();
   });
 })();

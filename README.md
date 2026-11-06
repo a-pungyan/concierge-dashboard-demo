@@ -12,10 +12,10 @@ What you change is saved in your browser's local storage. **Reset demo** restore
 
 ## Features
 
-- **Overview:** the day's tasks, overdue and upcoming follow-ups, notices, recent shift activity and pinned quick links, filterable by team (Concierge, Maintenance, Leasing, Property Management).
+- **Overview:** the Quick log up front, one "Needs attention" list (overdue, due today, then high priority), today's shift activity, the day's to-dos, team notices, follow-ups coming up this week and pinned quick links, filterable by team (Concierge, Maintenance, Leasing, Property Management).
 - **Quick log:** type one line, for example `bw on site for cleaning` or `e0903 leak under kitchen sink`. Keyword rules file it under the right shift note heading, and residents, vendors and areas are suggested as you type.
 - **Tidy with Claude:** in production this sends the line to Claude Haiku to tidy the wording and confirm the heading. Resident names, emails and phone numbers are swapped for placeholders before the line leaves the browser. In the demo, the keyword rules simulate the response.
-- **Shift Log:** a two-step form (section, then type) for operations, vendors, guest suites, events, resident touchpoints, welcome gifts, resident requests and amenities.
+- **Shift log:** a two-step form (section, then type) for operations, vendors, guest suites, events, resident touchpoints, welcome gifts, resident requests and amenities.
 - **Follow-ups:** owner team, assignee, due date, priority, status, next action and resolution. Overdue items are flagged, and an item can't be marked Done without a resolution.
 - **Resources:** work systems, trackers, SOPs, guides and contacts, with tags. Pinned resources appear on the Overview.
 - **Generate shift note:** builds a handover note grouped by section from the shift's logs and open follow-ups, ready to paste into email or Teams.
