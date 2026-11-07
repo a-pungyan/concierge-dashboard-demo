@@ -1,84 +1,61 @@
-/* ---------- Tokens ----------
-   Off-white page, soft black text, and a wasabi header bar; one theme in every OS setting.
-   Wasabi can't be read as text on a light page, so in the body it appears as fills
-   (selected team, highlights) and text accents use soft black. */
+/* ---------- Tokens: quiet surfaces, one primary action ---------- */
 :root {
-  --bg: #FFFFFF;        /* bright white canvas */
-  --surface: #FFFFFF;   /* Quick log, dialogs, menus */
-  --surface-2: rgba(28, 29, 31, .05); /* tint for badges, hovers and table headers */
-  --border: #EEEEF0;    /* thin dividers */
-  --text: #1C1D1F;      /* soft black */
-  --muted: #5E5F63;
-  --accent: #1C1D1F;    /* links and current selection read in soft black */
-  --accent-contrast: #E9F056;
-  --accent-soft: rgba(233, 240, 86, .55); /* wasabi wash */
-  /* Status colours: muted, but each still reads as itself */
+  --bg: #F5F5F7;
+  --surface: #FFFFFF;
+  --surface-2: #F0F0F2;
+  --border: #E8E8ED;
+  --text: #1D1D1F;
+  --muted: #6E6E73;
+  --accent: #1D1D1F;
+  --accent-contrast: #FFFFFF;
+  --accent-soft: #F0F0F2;
   --danger: #B42318;
   --danger-soft: #FBE9E7;
   --on-danger: #FFFFFF;
-  --warn: #8A5A00;
-  --warn-soft: #FBF1DA;
-  --ok: #1E6B3A;
-  --ok-soft: #E3F2E7;
-  --info: #24548F;
-  --info-soft: #E4ECF7;
-  --mark: rgba(233, 240, 86, .7);
-  --focus-ring: #1C1D1F;
-  --brass: #B07A2A;     /* Morning shift */
-  --dusk: #7B4E8C;      /* Afternoon shift */
+  --warn: #6E6E73;
+  --warn-soft: #F0F0F2;
+  --ok: #6E6E73;
+  --ok-soft: #F0F0F2;
+  --info: #6E6E73;
+  --info-soft: #F0F0F2;
+  --mark: #E8E8ED;
+  --focus-ring: #0071E3;
+  --brass: #8E8E93;
+  --dusk: #8E8E93;
   color-scheme: light;
-
-  --field-bg: #FFFFFF;
-  --field-border: #8C8D92;
-  --bar-bg: #1C1D1F;    /* soft black header */
+  --field-bg: #F5F5F7;
+  --field-border: #D2D2D7;
+  --bar-bg: #1D1D1F;
   --shadow: none;
-  --radius-panel: 0;
-  --radius-card: 0;
-  --radius-control: 0;
-  --radius-pill: 0;
-
+  --radius-panel: 14px;
+  --radius-card: 14px;
+  --radius-control: 10px;
+  --radius-pill: 999px;
   --font-text: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-display: var(--font-text);
   --font-data: var(--font-text);
-
-  /* Soft black fills with wasabi lettering: primary buttons such as Save, and the logo tile */
-  --fill-bg: #1C1D1F;
-  --fill-hover: #000000;
-  --fill-text: #E9F056;
-
-  /* Shift log types: quiet tonal labels, told apart by hue, not loudness */
-  --type-operations-bg: #DCE5EE;
-  --type-experience-bg: #1C1D1F;
-  --type-experience-text: #F6F4EE;
-  --type-gifts-bg: #F1DCD5;
-  --type-residents-bg: #F0E5C4;
-  --type-amenities-bg: #DDE6D2;
-  --type-text: #1C1D1F;
-
-  /* Team filter */
-  --seg-active-bg: #E9F056; /* wasabi pill on the selected team */
-  --seg-active-text: #1C1D1F;
-  --seg-slide: .28s cubic-bezier(.16, 1, .3, 1);
+  --fill-bg: #1D1D1F;
+  --fill-hover: #333336;
+  --fill-text: #FFFFFF;
+  --type-operations-bg: #F0F0F2;
+  --type-experience-bg: #F0F0F2;
+  --type-experience-text: #6E6E73;
+  --type-gifts-bg: #F0F0F2;
+  --type-residents-bg: #F0F0F2;
+  --type-amenities-bg: #F0F0F2;
+  --type-text: #6E6E73;
+  --seg-active-bg: transparent;
+  --seg-active-text: #1D1D1F;
+  --seg-slide: .2s ease;
 }
 
-/* Soft black header: the top bar and tabs get light text and borders. The search field and the
-   account dropdown stay white with dark text, so --text itself is not overridden here. */
-.topbar, .tabs {
-  --muted: rgba(255, 255, 255, .7);
-  --surface-2: rgba(255, 255, 255, .1);
-  --border: rgba(255, 255, 255, .12);
-  --field-border: transparent;
-  --focus-ring: #E9F056;
+/* The navigation is the dashboard's one dark surface. */
+.tabs {
+  --muted: #B6B6BC;
+  --border: #333336;
   color: #FFFFFF;
 }
-.topbar .menu-btn, .tabs a:hover, .tabs a[aria-current="page"] { color: #FFFFFF; }
-.topbar input::placeholder { color: #5E5F63; }
-.topbar .brand-mark { background: #E9F056; color: #1C1D1F; }
-.topbar .account-menu { --muted: #5E5F63; --surface-2: rgba(28,29,31,.05); --border: #EEEEF0; --focus-ring: #1C1D1F; color: var(--text); }
-
-/* Regular weight everywhere; only the shift log entries keep bold.
-   The shift note preview keeps its bold too, since it mirrors the email. */
-body *:not(:where(.log, .log *, .note-preview, .note-preview *)) { font-weight: 400 !important; }
+.tabs a:hover, .tabs a[aria-current="page"] { color: #FFFFFF; }
 
 /* ---------- Base ---------- */
 * { box-sizing: border-box; }
@@ -95,7 +72,7 @@ body[data-shift="Afternoon"] { --shift: var(--dusk); }
 ::selection { background: var(--accent-soft); color: var(--text); }
 input, textarea, [contenteditable] { caret-color: var(--accent); }
 h1, h2, h3 { line-height: 1.2; margin: 0; }
-h1 { font-family: var(--font-display); font-size: 2.1rem; font-weight: 500; letter-spacing: -.025em; text-wrap: balance; }
+h1 { font-family: var(--font-display); font-size: 2.1rem; font-weight: 600; letter-spacing: -.025em; text-wrap: balance; }
 h2 { font-family: var(--font-display); font-size: 1.05rem; font-weight: 550; letter-spacing: -.01em; }
 h3 { font-size: .74rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; }
 p { margin: 0; }
@@ -105,7 +82,7 @@ kbd {
   font: 600 .72rem/1 var(--font-data); padding: 2px 5px; border-radius: 0;
   border: 1px solid var(--border); border-bottom-width: 2px; background: var(--surface); color: var(--muted);
 }
-:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+:focus-visible { outline: 1px solid var(--focus-ring); outline-offset: 2px; }
 
 .sr-only {
   position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px;
@@ -124,8 +101,7 @@ kbd {
 .topbar {
   display: flex; align-items: center; gap: 16px;
   padding: 12px max(16px, calc((100vw - 1240px) / 2));
-  background: var(--bar-bg); border-bottom: 1px solid var(--border);
-  border-top: 3px solid var(--shift); /* brass in the morning, dusk in the afternoon */
+  background: var(--bg); border: 0;
 }
 .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .brand-mark {
@@ -137,7 +113,7 @@ kbd {
 .brand-name { font-family: var(--font-display); font-weight: 650; white-space: nowrap; }
 .brand-sub { font-size: .78rem; color: var(--muted); white-space: nowrap; }
 .global-search { flex: 1; max-width: 520px; margin-left: auto; }
-.global-search input { width: 100%; border-radius: 999px; padding-inline: 18px; } /* the one rounded control */
+.global-search input { width: 100%; padding-inline: 18px; }
 
 .tabs {
   display: flex; gap: 4px; overflow-x: auto;
@@ -150,7 +126,7 @@ kbd {
   border-bottom: 3px solid transparent; white-space: nowrap;
 }
 .tabs a:hover { color: #FFFFFF; }
-.tabs a[aria-current="page"] { color: #FFFFFF; border-bottom-color: #E9F056; }
+.tabs a[aria-current="page"] { color: #FFFFFF; border-bottom-color: #FFFFFF; }
 
 main { max-width: 1240px; margin: 0 auto; padding: 24px 16px 64px; outline: none; }
 
@@ -224,13 +200,13 @@ label.check input { width: 18px; height: 18px; min-height: 0; }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; }
 
 .card {
-  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-panel);
+  background: var(--surface); border: 0; border-radius: var(--radius-panel);
   padding: 16px 18px; box-shadow: var(--shadow); margin-bottom: 16px; min-width: 0;
 }
 .card-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; margin-bottom: 10px; }
 .count {
   display: inline-block; min-width: 1.6em; text-align: center; font-size: .72rem; font-weight: 500;
-  background: var(--surface-2); color: var(--muted); border-radius: 0; padding: 1px 7px; margin-left: 4px;
+  background: none; color: var(--muted); border-radius: 0; padding: 1px 4px; margin-left: 4px;
   vertical-align: 2px;
 }
 
@@ -249,54 +225,27 @@ label.check input { width: 18px; height: 18px; min-height: 0; }
 .seg:hover { color: var(--text); }
 .seg[aria-pressed="true"] { color: var(--seg-active-text); font-weight: 600; }
 .team-filter .seg { padding: 6px 12px; }
-/* The team switcher keeps rounded pills, like the search bar. */
-.segmented .seg, .segmented .seg-thumb { border-radius: 999px; }
+/* Team filters use one underline treatment. */
+.segmented .seg { border-radius: 0; border-bottom: 2px solid transparent; }
+.segmented .seg[aria-pressed="true"] { border-bottom-color: var(--text); }
+.seg-thumb { display: none; }
 
 .overview-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 0 20px; align-items: start; }
 
 /* ---------- Overview sections: white panels on the off-white page, like the Quick log ---------- */
 main[data-view="overview"] .card:not(.quick-log) {
-  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-panel); box-shadow: none;
+  background: var(--surface); border: 0; border-radius: var(--radius-panel); box-shadow: none;
   padding: 18px 20px; margin-bottom: 20px;
 }
-/* Panel titles are bold, an exception to the regular-weight rule.
-   Hierarchy: Quick log > Needs attention > the other panels. */
-.card h2, .card h2 * { font-weight: 700 !important; }
-.card h2 .count { font-weight: 500 !important; }
-/* Quick log is the one filled panel: soft black with white text and a wasabi Save.
-   Fields, buttons and the suggestion list stay white with dark text. */
-form.card.quick-log {
-  background: var(--text); color: #FFFFFF; border: 0;
-  --muted: rgba(255,255,255,.72); --border: rgba(255,255,255,.18); --field-border: transparent;
-  --fill-bg: #E9F056; --fill-hover: #F2F78A; --fill-text: #1C1D1F; --focus-ring: #E9F056;
-}
-.quick-log .quick-log-title, .quick-log label, .quick-log label.check, .quick-log .quick-log-more:hover { color: #FFFFFF; }
-.quick-log input::placeholder, .quick-log textarea::placeholder { color: #5E5F63; }
-.quick-log .btn-ghost { color: #FFFFFF; border-color: rgba(255,255,255,.3); }
-.quick-log .btn-ghost:hover { background: rgba(255,255,255,.1); }
-main[data-view="overview"] .card.attention-card { overflow: hidden; }
-/* Soft black header band runs edge to edge across the top of the panel. */
-.attention-card .card-head { background: var(--text); color: #FFFFFF; margin: -18px -20px 14px; padding: 14px 20px 12px; align-items: center; }
-.attention-card h2 { font-size: 1.15rem; color: #FFFFFF; }
-.attention-card h2 .count { background: rgba(255,255,255,.16); color: #FFFFFF; }
-.attention-card .card-head .small-link, .attention-card .card-head .small-link:hover { color: #FFFFFF; }
-.attention-card .card-head :focus-visible { outline-color: #E9F056; }
-/* The other Overview panels get a light grey title band, a quieter echo of Needs attention's. */
-main[data-view="overview"] .card:not(.quick-log):not(.attention-card) { overflow: hidden; }
-main[data-view="overview"] .card:not(.quick-log):not(.attention-card) > .card-head,
-main[data-view="overview"] .todo-panel > h2 {
-  background: #F2F2F3; margin: -18px -20px 14px; padding: 14px 20px 12px; align-items: center;
-}
-main[data-view="overview"] .card:not(.quick-log):not(.attention-card) h2 .count { background: #FFFFFF; }
-/* Folded to-do list: just the band. */
-main[data-view="overview"] .todo-panel:has(#todo-body[hidden]) { padding-bottom: 0; }
-main[data-view="overview"] .todo-panel:has(#todo-body[hidden]) > h2 { margin-bottom: 0; }
+/* Plain headings keep the task content in the foreground. */
+.card h2 { font-weight: 600; }
+.card h2 .count { font-weight: 400; }
+form.card.quick-log { padding: 24px; gap: 14px; border: 0; }
+.quick-log .btn-primary { --fill-bg: #0071E3; --fill-hover: #0064CA; --fill-text: #FFFFFF; }
+.attention-card .card-head { align-items: baseline; }
+.attention-card h2 { font-size: 1.05rem; }
 .todo-panel > h2 .disclosure { width: 100%; }
-.todo-panel #todo-body { margin-top: 0; }
-/* Boxes: slightly rounded top corners, square bottoms. */
-.card, main[data-view="overview"] .card:not(.quick-log), .table-wrap { border-radius: 10px 10px 0 0; }
-/* The More options fields match the rounded Quick log entry. */
-.quick-log-options input:not([type="checkbox"]), .quick-log-options select { border-radius: 999px; padding-inline: 16px; }
+.todo-panel #todo-body { margin-top: 12px; }
 
 .small-link.link-btn, a.small-link { font-weight: 500; color: var(--accent); text-decoration: none; }
 .small-link.link-btn:hover, a.small-link:hover { text-decoration: underline; color: var(--accent); }
@@ -310,7 +259,10 @@ main[data-view="overview"] .todo-panel:has(#todo-body[hidden]) > h2 { margin-bot
 .task-title { font-weight: 500; line-height: 1.35; }
 .task-meta { font-size: .85rem; color: var(--muted); margin-top: 2px; }
 .task-due.is-overdue { color: var(--danger); }
-.task-due.is-today { color: var(--warn); }
+.task-due.is-today { color: var(--muted); }
+.task-due.is-today::before, .task-status::before { content: ""; display: inline-block; width: 5px; height: 5px; margin: 0 5px 2px 0; border-radius: 50%; background: #9C875D; }
+.task-status::before { background: #8E8E93; }
+.task-title:hover { text-decoration: none; color: var(--muted); }
 .task-next { font-size: .85rem; color: var(--text); opacity: .85; margin-top: 3px; }
 
 .attention-clear { display: flex; align-items: center; gap: 10px; padding: 6px 0 2px; color: var(--muted); }
@@ -357,10 +309,10 @@ main[data-view="overview"] .notices li:first-child { border-top: 0; padding-top:
 .todo-actions { display: flex; gap: 4px; flex-shrink: 0; }
 /* Quick log: the Overview's front door, so it gets the most weight on the page. */
 .quick-log { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; padding: 18px 20px 16px; }
-.quick-log-title { font-family: var(--font-display); font-size: 1.3rem; font-weight: 700; color: var(--text); }
+.quick-log-title { font-family: var(--font-display); font-size: 1.3rem; font-weight: 600; color: var(--text); }
 .quick-log-field { position: relative; flex: 1; min-width: 0; }
 .quick-log-field input { width: 100%; }
-#quick-log-input { min-height: 50px; font-size: 1.05rem; padding: 10px 20px; border-radius: 999px; }
+#quick-log-input { min-height: 50px; font-size: 1.05rem; padding: 10px 16px; border-radius: var(--radius-control); border-color: transparent; }
 .inline-form:has(#quick-log-input) > .btn { min-height: 50px; }
 .quick-log-picks {
   position: absolute; z-index: 20; top: 100%; left: 0; right: 0; margin: 4px 0 0; padding: 4px; list-style: none;
@@ -417,7 +369,7 @@ main[data-view="overview"] .notices li:first-child { border-top: 0; padding-top:
 /* ---------- Filters ---------- */
 .filters {
   display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px;
-  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-panel); box-shadow: var(--shadow);
+  background: var(--surface); border: 0; border-radius: var(--radius-panel); box-shadow: var(--shadow);
   padding: 12px; margin-bottom: 8px;
 }
 .filters label { flex: 0 1 160px; }
@@ -425,7 +377,7 @@ main[data-view="overview"] .notices li:first-child { border-top: 0; padding-top:
 .result-count { font-size: .85rem; color: var(--muted); margin: 0 0 12px 2px; }
 
 /* ---------- Follow-up table ---------- */
-.table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-panel); box-shadow: var(--shadow); }
+.table-wrap { overflow-x: auto; background: var(--surface); border: 0; border-radius: var(--radius-panel); box-shadow: var(--shadow); }
 .fu-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
 .fu-table th {
   text-align: left; font-size: .78rem; text-transform: uppercase; letter-spacing: .03em; color: var(--muted);
@@ -570,7 +522,7 @@ dialog.login .btn-primary { margin-top: 4px; }
   padding: 16px 20px; max-height: 60vh; overflow: auto;
   font-family: Calibri, Carlito, "Segoe UI", Arial, sans-serif; font-size: 11pt; line-height: 1.15;
 }
-.note-preview:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.note-preview:focus-visible { outline: 1px solid var(--focus-ring); outline-offset: 2px; }
 /* Some computers only have the regular Calibri face installed, so bold can't be drawn.
    The preview then thickens bold text on screen only; the copied HTML still uses <b>,
    which Outlook renders with its real Calibri Bold. */
@@ -591,7 +543,7 @@ dialog.login .btn-primary { margin-top: 4px; }
 /* Arrow hints that choosing a card moves on to the next step. */
 .type-card::after { content: "›"; position: absolute; right: 16px; top: 50%; transform: translateY(-50%); font-size: 1.4rem; color: var(--muted); }
 .type-card:hover::after, .type-card:has(input:checked)::after { color: var(--accent); }
-.type-card:has(input:focus-visible) { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.type-card:has(input:focus-visible) { outline: 1px solid var(--focus-ring); outline-offset: 2px; }
 .type-card-title { display: block; font-weight: 650; font-size: .95rem; }
 .type-card-desc { display: block; font-size: .84rem; color: var(--muted); margin-top: 2px; }
 .type-card-eg { display: block; font-size: .78rem; color: var(--muted); margin-top: 6px; }
@@ -603,7 +555,7 @@ dialog.login .btn-primary { margin-top: 4px; }
 .subtype-option input { position: absolute; opacity: 0; pointer-events: none; }
 .subtype-option:hover { border-color: var(--accent); }
 .subtype-option:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
-.subtype-option:has(input:focus-visible) { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.subtype-option:has(input:focus-visible) { outline: 1px solid var(--focus-ring); outline-offset: 2px; }
 #log-step2 { display: flex; flex-direction: column; gap: 14px; }
 #log-step2 .step-section { margin-bottom: -8px; }
 
@@ -672,3 +624,16 @@ dialog.drawer {
 @media (max-width: 860px) {
   .shortcuts { display: none; } /* no keyboard on most phones */
 }
+
+/* Controls share one geometry; pills are reserved for actions. */
+.btn { border-radius: var(--radius-pill); }
+.brand-name { font-size: .9rem; font-weight: 500; }
+.global-search { position: relative; }
+.global-search svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 17px; height: 17px; color: var(--muted); pointer-events: none; }
+.global-search input { padding-left: 40px; padding-right: 42px; background: #EBEBEE; border: 0; border-radius: var(--radius-control); }
+.search-shortcut { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); opacity: .65; font-size: .78rem; pointer-events: none; }
+input[type="checkbox"] { appearance: none; width: 18px; height: 18px; min-height: 18px; padding: 0; flex: none; border: 1px solid #A1A1A6; border-radius: 50%; background: transparent; cursor: pointer; }
+input[type="checkbox"]:checked { background: var(--text); border-color: var(--text); position: relative; }
+input[type="checkbox"]:checked::after { content: ""; position: absolute; left: 5px; top: 2px; width: 5px; height: 9px; border: solid white; border-width: 0 1.5px 1.5px 0; transform: rotate(45deg); }
+.pri-high { background: var(--surface-2); color: var(--muted); }
+.btn-danger, .btn-danger-ghost { background: var(--surface-2); border-color: transparent; color: var(--text); }

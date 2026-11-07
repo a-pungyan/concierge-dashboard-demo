@@ -613,7 +613,7 @@ function taskItem(f, why = '') {
     f.unit && esc(f.unit),
     `<span class="task-due ${tone}">${esc(dueLabel(f))}</span>`,
     why && esc(why),
-    status && esc(status),
+    status && `<span class="task-status">${esc(status)}</span>`,
   ];
   const line = parts.filter(Boolean).join(' <span aria-hidden="true">·</span> ');
   return `
