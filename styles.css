@@ -638,10 +638,9 @@ input[type="checkbox"]:checked::after { content: ""; position: absolute; left: 5
 .pri-high { background: var(--surface-2); color: var(--muted); }
 .btn-danger, .btn-danger-ghost { background: var(--surface-2); border-color: transparent; color: var(--text); }
 
-/* Anchor the workspace to the left, with room for personal notes above it. */
-.topbar { padding-inline: 24px; }
-.tabs { padding-inline: 24px; }
-main { margin-left: 0; margin-right: auto; padding-inline: 24px; }
+/* Keep the dashboard and navigation on the same centered workspace. */
+.topbar, .tabs { padding-inline: max(24px, calc((100vw - 1240px) / 2 + 24px)); }
+main { margin-inline: auto; padding-inline: 24px; }
 .page-head { justify-content: flex-start; gap: 20px 32px; }
 .badges { justify-content: flex-start; }
 .item-side { align-items: flex-start; }
