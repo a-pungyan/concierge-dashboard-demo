@@ -745,7 +745,6 @@ function viewOverview() {
           '<a href="#logs" class="small-link">View all</a>')}
       </div>
       <div class="col">
-        ${todoSection()}
         ${section('Notices for the team', notices.length, `
           ${notices.length ? `<ul class="notices" id="notice-list">${shownNotices.map((n) => `
             <li><span>${esc(n.text)}</span>

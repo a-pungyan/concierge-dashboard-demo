@@ -637,3 +637,63 @@ input[type="checkbox"]:checked { background: var(--text); border-color: var(--te
 input[type="checkbox"]:checked::after { content: ""; position: absolute; left: 5px; top: 2px; width: 5px; height: 9px; border: solid white; border-width: 0 1.5px 1.5px 0; transform: rotate(45deg); }
 .pri-high { background: var(--surface-2); color: var(--muted); }
 .btn-danger, .btn-danger-ghost { background: var(--surface-2); border-color: transparent; color: var(--text); }
+
+/* Anchor the workspace to the left, with room for personal notes above it. */
+.topbar { padding-inline: 24px; }
+.tabs { padding-inline: 24px; }
+main { margin-left: 0; margin-right: auto; padding-inline: 24px; }
+.page-head { justify-content: flex-start; gap: 20px 32px; }
+.badges { justify-content: flex-start; }
+.item-side { align-items: flex-start; }
+
+/* Notes float over the workspace; only the notes intercept pointer events. */
+.sticky-stack {
+  position: fixed; bottom: 24px; right: 24px; z-index: 90;
+  gap: 8px; padding: 10px 16px; border-radius: 6px;
+  background: var(--surface); color: var(--text); border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+.sticky-stack:hover { background: var(--surface-2); }
+.sticky-stack svg { width: 20px; height: 20px; }
+.sticky-layer { position: fixed; inset: 0; z-index: 100; pointer-events: none; }
+.sticky-note {
+  position: absolute; width: min(260px, calc(100vw - 16px)); height: min(250px, calc(100dvh - 16px));
+  display: flex; flex-direction: column; pointer-events: auto;
+  background: #F5F0DE; color: #494536; border-radius: 6px;
+  box-shadow: 0 8px 28px rgba(29,29,31,.14); overflow: hidden;
+}
+.sticky-toolbar { display: flex; align-items: center; padding: 4px 6px 4px 32px; }
+.sticky-grip, .sticky-delete {
+  display: flex; align-items: center; justify-content: center; min-height: 36px;
+  background: transparent; color: #665F4C; border: 0; border-radius: 8px; cursor: pointer;
+}
+.sticky-grip { flex: 1; justify-content: flex-start; gap: 5px; font: 500 .75rem var(--font-text); cursor: grab; touch-action: none; user-select: none; }
+.sticky-grip svg, .sticky-delete svg { width: 20px; height: 20px; }
+.sticky-delete { width: 36px; }
+.sticky-delete:hover { background: rgba(73,69,54,.08); }
+.sticky-note.is-dragging .sticky-grip { cursor: grabbing; }
+.sticky-note textarea { flex: 1; min-height: 0; padding: 4px 16px 16px; background: transparent; color: inherit; border: 0; border-radius: 0; resize: none; font-size: .95rem; line-height: 1.55; }
+.sticky-note textarea::placeholder { color: #77705C; }
+.sticky-note textarea:focus-visible { outline: none; }
+.signed-out .sticky-stack, .signed-out .sticky-layer { visibility: hidden; }
+@media (max-width: 720px) {
+  .topbar, .tabs { padding-inline: 16px; }
+  main { padding-inline: 16px; }
+  .sticky-stack { bottom: 16px; right: 16px; }
+  main { padding-bottom: 96px; }
+}
+
+.sticky-resize {
+  position: absolute; left: 4px; top: 8px; display: grid; place-items: center;
+  width: 28px; height: 28px; padding: 0; border: 0; border-radius: 6px;
+  background: transparent; color: #665F4C; cursor: nwse-resize; touch-action: none;
+}
+.sticky-resize:hover { background: rgba(73,69,54,.08); }
+.sticky-resize svg { width: 20px; height: 20px; transform: rotate(180deg); }
+.sticky-note textarea { padding-bottom: 30px; }
+
+/* Quiet note controls retain their full pointer targets. */
+.sticky-delete, .sticky-resize { color: #8B8576; }
+.sticky-delete svg, .sticky-resize svg { width: 14px; height: 14px; }
+.sticky-delete:hover, .sticky-resize:hover,
+.sticky-delete:focus-visible, .sticky-resize:focus-visible { color: #494536; }

@@ -256,6 +256,13 @@
     </form>
   </dialog>
 
+  <button type="button" class="btn sticky-stack" id="sticky-stack" aria-label="Add a sticky note" title="Add a personal note. Saved in this browser.">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 5H3v16h16v-2M7 3h14v10l-6 6H7zM15 19v-6h6M11 7v6M8 10h6"/></svg>
+    <span>Sticky Note</span>
+  </button>
+  <div id="sticky-notes" class="sticky-layer" aria-label="Personal sticky notes"></div>
+  <p id="sticky-status" class="sr-only" role="status" aria-live="polite"></p>
+  <script src="sticky-notes.js"></script>
   <script src="config.js"></script>
   <script src="data.js"></script>
   <script src="quick-entry.js"></script>
