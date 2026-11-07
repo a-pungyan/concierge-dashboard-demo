@@ -3,10 +3,10 @@
    Wasabi can't be read as text on a light page, so in the body it appears as fills
    (selected team, highlights) and text accents use soft black. */
 :root {
-  --bg: #FCFAF3;        /* bright warm off-white canvas */
+  --bg: #FFFFFF;        /* bright white canvas */
   --surface: #FFFFFF;   /* Quick log, dialogs, menus */
   --surface-2: rgba(28, 29, 31, .05); /* tint for badges, hovers and table headers */
-  --border: #E2DFD6;    /* thin dividers */
+  --border: #EEEEF0;    /* thin dividers */
   --text: #1C1D1F;      /* soft black */
   --muted: #5E5F63;
   --accent: #1C1D1F;    /* links and current selection read in soft black */
@@ -30,12 +30,12 @@
 
   --field-bg: #FFFFFF;
   --field-border: #8C8D92;
-  --bar-bg: #E9F056;    /* wasabi header */
+  --bar-bg: #1C1D1F;    /* soft black header */
   --shadow: none;
-  --radius-panel: 18px;
-  --radius-card: 14px;
-  --radius-control: 10px;
-  --radius-pill: 999px;
+  --radius-panel: 0;
+  --radius-card: 0;
+  --radius-control: 0;
+  --radius-pill: 0;
 
   --font-text: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-display: var(--font-text);
@@ -61,14 +61,20 @@
   --seg-slide: .28s cubic-bezier(.16, 1, .3, 1);
 }
 
-/* Wasabi header: the top bar and tabs get borders and secondary text tuned for the yellow-green. */
+/* Soft black header: the top bar and tabs get light text and borders. The search field and the
+   account dropdown stay white with dark text, so --text itself is not overridden here. */
 .topbar, .tabs {
-  --muted: #45472A;           /* 7:1 on wasabi */
-  --surface-2: rgba(28, 29, 31, .08);
-  --border: rgba(28, 29, 31, .16);
-  --field-border: rgba(28, 29, 31, .4);
-  color: var(--text);
+  --muted: rgba(255, 255, 255, .7);
+  --surface-2: rgba(255, 255, 255, .1);
+  --border: rgba(255, 255, 255, .12);
+  --field-border: transparent;
+  --focus-ring: #E9F056;
+  color: #FFFFFF;
 }
+.topbar .menu-btn, .tabs a:hover, .tabs a[aria-current="page"] { color: #FFFFFF; }
+.topbar input::placeholder { color: #5E5F63; }
+.topbar .brand-mark { background: #E9F056; color: #1C1D1F; }
+.topbar .account-menu { --muted: #5E5F63; --surface-2: rgba(28,29,31,.05); --border: #EEEEF0; --focus-ring: #1C1D1F; color: var(--text); }
 
 /* Regular weight everywhere; only the shift log entries keep bold.
    The shift note preview keeps its bold too, since it mirrors the email. */
@@ -94,9 +100,9 @@ h2 { font-family: var(--font-display); font-size: 1.05rem; font-weight: 550; let
 h3 { font-size: .74rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; }
 p { margin: 0; }
 a { color: var(--accent); text-underline-offset: .18em; }
-mark { background: var(--mark); color: inherit; border-radius: 2px; padding: 0 1px; }
+mark { background: var(--mark); color: inherit; border-radius: 0; padding: 0 1px; }
 kbd {
-  font: 600 .72rem/1 var(--font-data); padding: 2px 5px; border-radius: 4px;
+  font: 600 .72rem/1 var(--font-data); padding: 2px 5px; border-radius: 0;
   border: 1px solid var(--border); border-bottom-width: 2px; background: var(--surface); color: var(--muted);
 }
 :focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
@@ -105,7 +111,7 @@ kbd {
   position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
 }
-.skip-link { position: absolute; left: -999px; top: 8px; z-index: 100; background: var(--surface); padding: 8px 12px; border-radius: 6px; }
+.skip-link { position: absolute; left: -999px; top: 8px; z-index: 100; background: var(--surface); padding: 8px 12px; border-radius: 0; }
 .skip-link:focus { left: 8px; }
 .muted { color: var(--muted); }
 .small { font-size: .85rem; }
@@ -131,7 +137,7 @@ kbd {
 .brand-name { font-family: var(--font-display); font-weight: 650; white-space: nowrap; }
 .brand-sub { font-size: .78rem; color: var(--muted); white-space: nowrap; }
 .global-search { flex: 1; max-width: 520px; margin-left: auto; }
-.global-search input { width: 100%; }
+.global-search input { width: 100%; border-radius: 999px; padding-inline: 18px; } /* the one rounded control */
 
 .tabs {
   display: flex; gap: 4px; overflow-x: auto;
@@ -143,8 +149,8 @@ kbd {
   padding: 12px 14px; color: var(--muted); text-decoration: none; font-weight: 550;
   border-bottom: 3px solid transparent; white-space: nowrap;
 }
-.tabs a:hover { color: var(--text); }
-.tabs a[aria-current="page"] { color: var(--text); border-bottom-color: var(--accent); }
+.tabs a:hover { color: #FFFFFF; }
+.tabs a[aria-current="page"] { color: #FFFFFF; border-bottom-color: #E9F056; }
 
 main { max-width: 1240px; margin: 0 auto; padding: 24px 16px 64px; outline: none; }
 
@@ -194,7 +200,7 @@ label.check input { width: 18px; height: 18px; min-height: 0; }
 /* ---------- Badges ---------- */
 .badge {
   display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
-  font-size: .74rem; font-weight: 500; padding: 2px 9px; border-radius: 999px;
+  font-size: .74rem; font-weight: 500; padding: 2px 9px; border-radius: 0;
   border: 1px solid transparent;
 }
 .badge.cat { background: var(--surface-2); color: var(--muted); font-weight: 450; }
@@ -224,7 +230,7 @@ label.check input { width: 18px; height: 18px; min-height: 0; }
 .card-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; margin-bottom: 10px; }
 .count {
   display: inline-block; min-width: 1.6em; text-align: center; font-size: .72rem; font-weight: 500;
-  background: var(--surface-2); color: var(--muted); border-radius: 999px; padding: 1px 7px; margin-left: 4px;
+  background: var(--surface-2); color: var(--muted); border-radius: 0; padding: 1px 7px; margin-left: 4px;
   vertical-align: 2px;
 }
 
@@ -243,6 +249,8 @@ label.check input { width: 18px; height: 18px; min-height: 0; }
 .seg:hover { color: var(--text); }
 .seg[aria-pressed="true"] { color: var(--seg-active-text); font-weight: 600; }
 .team-filter .seg { padding: 6px 12px; }
+/* The team switcher keeps rounded pills, like the search bar. */
+.segmented .seg, .segmented .seg-thumb { border-radius: 999px; }
 
 .overview-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 0 20px; align-items: start; }
 
@@ -251,6 +259,45 @@ main[data-view="overview"] .card:not(.quick-log) {
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-panel); box-shadow: none;
   padding: 18px 20px; margin-bottom: 20px;
 }
+/* Panel titles are bold, an exception to the regular-weight rule.
+   Hierarchy: Quick log > Needs attention > the other panels. */
+.card h2, .card h2 * { font-weight: 700 !important; }
+.card h2 .count { font-weight: 500 !important; }
+/* Quick log is the one filled panel: soft black with white text and a wasabi Save.
+   Fields, buttons and the suggestion list stay white with dark text. */
+form.card.quick-log {
+  background: var(--text); color: #FFFFFF; border: 0;
+  --muted: rgba(255,255,255,.72); --border: rgba(255,255,255,.18); --field-border: transparent;
+  --fill-bg: #E9F056; --fill-hover: #F2F78A; --fill-text: #1C1D1F; --focus-ring: #E9F056;
+}
+.quick-log .quick-log-title, .quick-log label, .quick-log label.check, .quick-log .quick-log-more:hover { color: #FFFFFF; }
+.quick-log input::placeholder, .quick-log textarea::placeholder { color: #5E5F63; }
+.quick-log .btn-ghost { color: #FFFFFF; border-color: rgba(255,255,255,.3); }
+.quick-log .btn-ghost:hover { background: rgba(255,255,255,.1); }
+main[data-view="overview"] .card.attention-card { overflow: hidden; }
+/* Soft black header band runs edge to edge across the top of the panel. */
+.attention-card .card-head { background: var(--text); color: #FFFFFF; margin: -18px -20px 14px; padding: 14px 20px 12px; align-items: center; }
+.attention-card h2 { font-size: 1.15rem; color: #FFFFFF; }
+.attention-card h2 .count { background: rgba(255,255,255,.16); color: #FFFFFF; }
+.attention-card .card-head .small-link, .attention-card .card-head .small-link:hover { color: #FFFFFF; }
+.attention-card .card-head :focus-visible { outline-color: #E9F056; }
+/* The other Overview panels get a light grey title band, a quieter echo of Needs attention's. */
+main[data-view="overview"] .card:not(.quick-log):not(.attention-card) { overflow: hidden; }
+main[data-view="overview"] .card:not(.quick-log):not(.attention-card) > .card-head,
+main[data-view="overview"] .todo-panel > h2 {
+  background: #F2F2F3; margin: -18px -20px 14px; padding: 14px 20px 12px; align-items: center;
+}
+main[data-view="overview"] .card:not(.quick-log):not(.attention-card) h2 .count { background: #FFFFFF; }
+/* Folded to-do list: just the band. */
+main[data-view="overview"] .todo-panel:has(#todo-body[hidden]) { padding-bottom: 0; }
+main[data-view="overview"] .todo-panel:has(#todo-body[hidden]) > h2 { margin-bottom: 0; }
+.todo-panel > h2 .disclosure { width: 100%; }
+.todo-panel #todo-body { margin-top: 0; }
+/* Boxes: slightly rounded top corners, square bottoms. */
+.card, main[data-view="overview"] .card:not(.quick-log), .table-wrap { border-radius: 10px 10px 0 0; }
+/* The More options fields match the rounded Quick log entry. */
+.quick-log-options input:not([type="checkbox"]), .quick-log-options select { border-radius: 999px; padding-inline: 16px; }
+
 .small-link.link-btn, a.small-link { font-weight: 500; color: var(--accent); text-decoration: none; }
 .small-link.link-btn:hover, a.small-link:hover { text-decoration: underline; color: var(--accent); }
 
@@ -302,7 +349,6 @@ main[data-view="overview"] .notices li:first-child { border-top: 0; padding-top:
 }
 .disclosure[aria-expanded="true"]::after { transform: translateY(1px) rotate(-135deg); }
 .todo-panel h2 .disclosure { font-weight: inherit; }
-.todo-panel #todo-body { margin-top: 12px; }
 
 .todos { list-style: none; margin: 0 0 10px; padding: 0; }
 .todos li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 0; border-top: 1px solid var(--border); }
@@ -311,10 +357,10 @@ main[data-view="overview"] .notices li:first-child { border-top: 0; padding-top:
 .todo-actions { display: flex; gap: 4px; flex-shrink: 0; }
 /* Quick log: the Overview's front door, so it gets the most weight on the page. */
 .quick-log { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; padding: 18px 20px 16px; }
-.quick-log-title { font-family: var(--font-display); font-size: 1.15rem; font-weight: 550; color: var(--text); }
+.quick-log-title { font-family: var(--font-display); font-size: 1.3rem; font-weight: 700; color: var(--text); }
 .quick-log-field { position: relative; flex: 1; min-width: 0; }
 .quick-log-field input { width: 100%; }
-#quick-log-input { min-height: 50px; font-size: 1.05rem; padding: 10px 14px; }
+#quick-log-input { min-height: 50px; font-size: 1.05rem; padding: 10px 20px; border-radius: 999px; }
 .inline-form:has(#quick-log-input) > .btn { min-height: 50px; }
 .quick-log-picks {
   position: absolute; z-index: 20; top: 100%; left: 0; right: 0; margin: 4px 0 0; padding: 4px; list-style: none;
@@ -405,7 +451,7 @@ main[data-view="overview"] .notices li:first-child { border-top: 0; padding-top:
 .res-name { font-weight: 650; }
 .res-notes { font-size: .88rem; color: var(--muted); margin-top: 2px; }
 .tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
-.tag { font-size: .72rem; padding: 1px 7px; border-radius: 999px; background: var(--surface-2); color: var(--muted); }
+.tag { font-size: .72rem; padding: 1px 7px; border-radius: 0; background: var(--surface-2); color: var(--muted); }
 
 /* ---------- Dialogs ---------- */
 dialog {
@@ -552,7 +598,7 @@ dialog.login .btn-primary { margin-top: 4px; }
 .subtype-options { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 .subtype-option {
   display: inline-flex; flex-direction: row; align-items: center; cursor: pointer; position: relative;
-  padding: 7px 12px; border: 1px solid var(--border); border-radius: 999px; color: var(--text); font-size: .88rem; font-weight: 550;
+  padding: 7px 12px; border: 1px solid var(--border); border-radius: 0; color: var(--text); font-size: .88rem; font-weight: 550;
 }
 .subtype-option input { position: absolute; opacity: 0; pointer-events: none; }
 .subtype-option:hover { border-color: var(--accent); }

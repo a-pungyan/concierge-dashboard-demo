@@ -661,9 +661,9 @@ function logItem(l, ts) {
     </article>`;
 }
 
-function section(title, count, body, extra = '') {
+function section(title, count, body, extra = '', cls = '') {
   return `
-    <section class="card">
+    <section class="card${cls ? ` ${cls}` : ''}">
       <header class="card-head">
         <h2>${title} <span class="count">${count}</span></h2>
         ${extra}
@@ -739,12 +739,13 @@ function viewOverview() {
 
     <div class="overview-grid">
       <div class="col">
-        ${section('Needs attention', attentionCount, attention, viewAllFu)}
+        ${section('Needs attention', attentionCount, attention, viewAllFu, 'attention-card')}
         ${section("Today's shift activity", todaysSorted.length,
           todaysSorted.length ? `<div class="logs compact">${todaysSorted.map((l) => logItem(l)).join('')}</div>` : emptyState('No shift logs yet today.'),
           '<a href="#logs" class="small-link">View all</a>')}
       </div>
       <div class="col">
+        ${todoSection()}
         ${section('Notices for the team', notices.length, `
           ${notices.length ? `<ul class="notices" id="notice-list">${shownNotices.map((n) => `
             <li><span>${esc(n.text)}</span>
@@ -758,7 +759,6 @@ function viewOverview() {
         ${section('Quick links', pinned.length,
           pinned.length ? `<ul class="quick-links">${pinned.map(resourceLink).join('')}</ul>` : emptyState('Pin resources on the Resources tab to show them here.'),
           '<a href="#resources" class="small-link">All resources</a>')}
-        ${todoSection()}
       </div>
     </div>
     </div>
